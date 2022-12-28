@@ -57,7 +57,7 @@ void loop()
 
   Serial.println("傳送資料到Google Sheet");
   HTTPClient http;
-  String url1=googlesheet_url + "entry.2049498581=" + Tempe + "&entry.2068971505=" + Humi + "&entry.1248109765=" + moisture_humi ;
+  String url1=googlesheet_url + "entry.2049498581=" + Tempe + "&entry.2068971505=" + Humi + "&entry.1248109765=" + moisture_humi ; //組合要填入google form的欄位(共3個)
   Serial.println(url1);
   http.begin(url1);
   int httpCode=http.GET();  //執行GET命令，順道取得網頁狀態值
