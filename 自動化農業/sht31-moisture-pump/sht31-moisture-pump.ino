@@ -15,7 +15,7 @@ void setup()
   Wire.setClock(100000);
   pinMode(moisture_pin,INPUT);  //設定讀取土壤sensor值
   pinMode(relay_pin,OUTPUT);    //設定觸發relay動作
-  digitalWrite(relay_pin,0);    //開機時relay不動作
+  digitalWrite(relay_pin,0);    //設定開機時relay不動作
 
 }
 
