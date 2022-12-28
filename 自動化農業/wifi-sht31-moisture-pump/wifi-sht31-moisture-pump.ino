@@ -2,14 +2,17 @@
 #include "Wire.h"
 #include "SHT31.h"
 #include <WiFi.h>
+#include <HTTPClient.h>
 char ssid[] = "hhvs-iot";       //wifi SSID
 char passwd[] = "Hhvs@54Iot"; //wifi passwd
 
 int moisture_pin=36;  //gpio36接土壤溼度感測器
 int relay_pin=17;  //gpio21 接relay
 
+String googlesheet_url="https://docs.google.com/forms/d/1RkAfATfK69qApBVhij3kjxMtO9rslxrsaJifx01-2YY/formResponse?" ; //寫入google sheet的網址
+
 #define SHT31_ADDRESS   0x44
-SHT31 sht;
+ ;SHT31 sht ;
 
 void setup()
 {
@@ -40,16 +43,23 @@ void loop()
   Serial.print("Moisture_Humi=");
   Serial.println(moisture_humi);
   Serial.println("");
-  delay(3000);
+  delay(120000);   //每120秒讀取一次
 
   if (Tempe >= 25)
   {
-    digitalWrite(relay_pin,1);
+    digitalWrite(relay_pin,1);   //如果溫度大於等於25，則relay動作
   }
   else
   {
     digitalWrite(relay_pin,0);
   }
+
+  Serial.println("傳送資料到Google Sheet");
+  HTTPClient http;
+  String url1=googlesheet_url + "entry.2049498581=" + Tempe + "&entry.2068971505=" + Humi + "&entry.1248109765=" + moisture_humi ;
+  Serial.println(url1);
+  http.begin(url1);
+  int httpCode=http.GET();  //執行GET命令，順道取得網頁狀態值
 
 }
 
