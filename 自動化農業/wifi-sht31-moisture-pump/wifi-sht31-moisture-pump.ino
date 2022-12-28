@@ -3,8 +3,8 @@
 #include "SHT31.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
-char ssid[] = "hhvs-iot";       //wifi SSID
-char passwd[] = "Hhvs@54Iot"; //wifi passwd
+char ssid[] = "填無線網路的SSID";       //wifi SSID
+char passwd[] = "填無線網路密碼"; //wifi passwd
 
 int moisture_pin=36;  //gpio36接土壤溼度感測器
 int relay_pin=17;  //gpio21 接relay
@@ -44,6 +44,7 @@ void loop()
   Serial.println(moisture_humi);
   Serial.println("");
   delay(1800000);   //每30分鐘讀取一次
+  
 
   if (Tempe >= 25)
   {
