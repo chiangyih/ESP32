@@ -43,7 +43,7 @@ void loop()
   Serial.print("Moisture_Humi=");
   Serial.println(moisture_humi);
   Serial.println("");
-  delay(120000);   //每120秒讀取一次
+  delay(1800000);   //每30分鐘讀取一次
 
   if (Tempe >= 25)
   {

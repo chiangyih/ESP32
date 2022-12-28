@@ -1,3 +1,5 @@
+表單與excel紀錄置放於  個人google drive/各類表單/20221228-空氣溫濕度與土壤濕度
+
 取得預先填入的連結:
 https://docs.google.com/forms/d/1RkAfATfK69qApBVhij3kjxMtO9rslxrsaJifx01-2YY/prefill
 
