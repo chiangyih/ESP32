@@ -115,7 +115,7 @@ void loop()
   //Serial.println(moisture_humi);
   //Serial.println("");
 
-  if((millis() - MQTTLastPublishTime) >= MQTTPublishInterval)
+  if((millis() - MQTTLastPublishTime) >= MQTTPublishInterval)  //若傳輸時間超過前面設定的10秒(MQTTPublishInterval，則繼續發佈到mqtt
   {
     MQTTClient.publish(pubTopic1,String(Tempe).c_str());  //推播氣溫
     MQTTClient.publish(pubTopic2,String(Humi).c_str());  //推播天氣濕度
@@ -200,12 +200,12 @@ void MQTTCallback(char* topic, byte* payload, unsigned int length)  //當subscri
     Serial.println("改變燈號：" + payloadString);
     if (payloadString == "ON") 
     {
-      digitalWrite(17, HIGH);
+      digitalWrite(17, HIGH);   //relay NO接點閉合
       
     }
     if (payloadString == "OFF") 
     {
-      digitalWrite(17, LOW);
+      digitalWrite(17, LOW);   //relay NO接點打開
       
     }
   }
