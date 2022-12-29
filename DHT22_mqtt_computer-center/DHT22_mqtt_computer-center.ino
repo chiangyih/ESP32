@@ -5,7 +5,7 @@
 // ------ 以下修改成你自己的WiFi帳號密碼 ------
 //char* ssid = "DAP3690-24";
 char* ssid = "hhvs-iot";
-char* password = "Hhvs@54Iot";
+char* password = "   ";
 //------ 以下修改成你DHT11腳位 ------
 int pinDHT22 = 16;
 SimpleDHT22 dht22(pinDHT22);
@@ -138,11 +138,11 @@ void MQTTCallback(char* topic, byte* payload, unsigned int length) {
     Serial.println("改變燈號：" + payloadString);
     if (payloadString == "ON") {
       digitalWrite(2, HIGH);
-      //MatrixInt(6,1); //實驗版上綠燈亮
+      
     }
     if (payloadString == "OFF") {
       digitalWrite(2, LOW);
-      //MatrixInt(6,0); //實驗版上綠燈暗
+      
     }
   }
 }
