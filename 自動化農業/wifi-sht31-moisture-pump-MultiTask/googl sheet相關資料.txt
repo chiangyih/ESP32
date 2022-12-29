@@ -1,0 +1,20 @@
+表單與excel紀錄置放於  個人google drive/各類表單/20221228-空氣溫濕度與土壤濕度
+
+取得預先填入的連結:
+https://docs.google.com/forms/d/1RkAfATfK69qApBVhij3kjxMtO9rslxrsaJifx01-2YY/prefill
+
+
+天氣溫度  entry.2049498581
+
+天氣溼度  entry.2068971505
+
+土壤濕度  entry.1248109765
+
+此表單的ID 1RkAfATfK69qApBVhij3kjxMtO9rslxrsaJifx01-2YY
+
+由上述資料組合寫入google sheet的網址
+https://docs.google.com/forms/d/1RkAfATfK69qApBVhij3kjxMtO9rslxrsaJifx01-2YY/formResponse?entry.2049498581=天氣溫度&entry.2068971505=天氣溼度&entry.1248109765=土壤濕度
+
+
+發佈到網路的連結(讀取資料用)
+https://docs.google.com/spreadsheets/d/e/2PACX-1vQTqc2pfgns6_wzvxRMN3MQ6FNzQP5soe8Ye8D393_PU4Ku1nuulXwCu1nvTTaupc5O-ClxVwtzDH8P/pub?gid=2126199027&single=true&output=csv
