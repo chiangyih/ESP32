@@ -49,7 +49,7 @@ void SendToGoogleSheet(void * pvParameters)   //工作一:每30分鐘傳送資�
   }
 }
 
-//void PublishDatatoMqtt(void * pvParameters)  //工作二:發送資料與訂閱mqtt broker #此項測試後wifi無法連線，將功能改為loop()
+//void PublishDatatoMqtt(void * pvParameters)  //工作二:發送資料與訂閱mqtt broker #此項測試後wifi無法連線，將功能改回到loop()執行
 //{
 //  if(!MQTTClient.connected())  //若mqtt連線中斷，則重新連線
 //  {
