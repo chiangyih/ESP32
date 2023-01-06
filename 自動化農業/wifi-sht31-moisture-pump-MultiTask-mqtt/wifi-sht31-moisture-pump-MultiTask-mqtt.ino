@@ -4,8 +4,8 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <PubSubClient.h>
-char ssid[] = "    ";       //wifi SSID
-char passwd[] = "    "; //wifi passwd
+char ssid[] = "  ";       //wifi SSID
+char passwd[] = "  "; //wifi passwd
 
 int moisture_pin=36;  //gpio36接土壤溼度感測器
 int relay_pin=17;  //gpio21 接relay
@@ -37,6 +37,8 @@ void SendToGoogleSheet(void * pvParameters)   //工作一:每30分鐘傳送資�
 {
   while(1)
   {
+      sht.read();
+      delay(500);
       float Tempe=sht.getTemperature();  //讀取sht31溫度值
       float Humi=sht.getHumidity();      //讀取sht31濕度值
       int moisture_humi=analogRead(moisture_pin); //讀取土壤濕度sensor值
@@ -49,24 +51,11 @@ void SendToGoogleSheet(void * pvParameters)   //工作一:每30分鐘傳送資�
   }
 }
 
-//void PublishDatatoMqtt(void * pvParameters)  //工作二:發送資料與訂閱mqtt broker #此項測試後wifi無法連線，將功能改回到loop()執行
+//void pump_work(void * pvParameters)  //工作二:水泵動作
 //{
-//  if(!MQTTClient.connected())  //若mqtt連線中斷，則重新連線
-//  {
-//    MQTTConnecte();
-//  }
-//  if((millis() - MQTTLastPublishTime) >= MQTTPublishInterval)
-//  {
-//    //string te="22";
-//    //string hu="50";
-//    //string mo="100";
-//    MQTTClient.publish(pubTopic1,"te");  //推播氣溫
-//    MQTTClient.publish(pubTopic2,"hu");  //推播天氣濕度
-//    MQTTClient.publish(pubTopic3,"mo");  //推播土壤濕度
-//    MQTTLastPublishTime = millis(); //更新最後傳輸時間
-//  }
-//  MQTTClient.loop(); //更新訂閱狀態
-//  delay(50);
+//  digitalWrite(relay_pin,1);   //relay作動
+//  delay(5000);
+//  digitalWrite(relay_pin,0);
 //}
 
 
@@ -95,7 +84,6 @@ void loop()
   {
     WifiConnecte();
   }
-
   if(!MQTTClient.connected())  //若mqtt連線中斷，則重新連線
   {
     MQTTConnecte();
@@ -107,13 +95,13 @@ void loop()
   float Humi=sht.getHumidity();      //讀取sht31濕度值
   int moisture_humi=analogRead(moisture_pin); //讀取土壤濕度sensor值
   
-  //Serial.print("Temp:"); 
-  //Serial.println(Tempe,1);  //小數點取1位
-  //Serial.print("Humi:");
-  //Serial.println(Humi,1);
-  //Serial.print("Moisture_Humi=");
-  //Serial.println(moisture_humi);
-  //Serial.println("");
+  Serial.print("Temp:"); 
+  Serial.println(Tempe,1);  //小數點取1位
+  Serial.print("Humi:");
+  Serial.println(Humi,1);
+  Serial.print("Moisture_Humi=");
+  Serial.println(moisture_humi);
+  Serial.println("");
 
   if((millis() - MQTTLastPublishTime) >= MQTTPublishInterval)  //若傳輸時間超過前面設定的10秒(MQTTPublishInterval，則繼續發佈到mqtt
   {
@@ -123,24 +111,24 @@ void loop()
     MQTTLastPublishTime = millis(); //更新最後傳輸時間
   }
   MQTTClient.loop(); //更新訂閱狀態
-  delay(50);
-
-
-
+  //delay(50); 
+  if (moisture_humi <= 500)
+  {
+    //digitalWrite(relay_pin,1);   //如果溫度大於等於25，則relay動作
+    pump_On();
+    delay(5000);   //等待水滲透至土壤，以利senor讀取
+  }
 
   delay(1000);        //每秒讀取一次
-  
-
-  if (Tempe >= 25)
-  {
-    digitalWrite(relay_pin,1);   //如果溫度大於等於25，則relay動作
-  }
-  else
-  {
-    digitalWrite(relay_pin,0);
-  }
 
 }
+void pump_On() //水泵動作
+{
+  digitalWrite(relay_pin,1);
+  delay(3000);  //水泵開啟3秒(依抽水馬達大小調整)
+  digitalWrite(relay_pin,0);  //關閉水泵
+}
+
 
  void WifiConnecte()  //wifi連線副程式
  {
