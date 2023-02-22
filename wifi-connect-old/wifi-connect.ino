@@ -1,6 +1,6 @@
 #include "WiFi.h"
 char ssid1[]="IE-office";  //設定你要連線的SSID
-char password1[]="20632063"; //設定連線密碼
+char password1[]="  "; //設定連線密碼
 void setup() 
 {
    Serial.begin(115200);  

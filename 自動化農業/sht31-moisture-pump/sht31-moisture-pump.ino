@@ -47,3 +47,8 @@ void loop()
   }
 
 }
+
+void ReadSHT31(byte *temp , byte *hmui) 
+{
+
+}
