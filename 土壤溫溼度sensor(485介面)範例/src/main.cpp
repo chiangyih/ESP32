@@ -17,36 +17,34 @@ byte soilSensorResponse[9];   // 回應土壤溫濕度資料,共9 bytes, 例如:
 
 
 void setup() 
-{
-  //宣告預設的Serial port初始化
-  Serial.begin(BAUD_RATE);
-  //宣告Serial2 port初始化
-  Serial2.begin(BAUD_RATE, SERIAL_8N1, rxa, txa); 
+{  
+  Serial.begin(BAUD_RATE);  //宣告預設的Serial port初始化
+  
+  Serial2.begin(BAUD_RATE, SERIAL_8N1, rxa, txa);  //宣告Serial2 port初始化
 }
 
 void loop() {
-  //傳送request給土壤濕度感測器
+  //傳送request(要求)給土壤濕度感測器, 並等待回覆
   Serial2.write(soilSensorRequest, sizeof(soilSensorRequest));
 
-  //檢查回覆的資料是否有9 bytes
-  while (Serial2.available() < 9)
+  //檢查回覆的資料是否有9 bytes(sensor回應的資料))
+  while (Serial2.available() < 9)  //若回應的資料長度小於9 bytes,則再等待1秒
   {
     delay(1000);
   }
 
-  //如果Serial2 port有等待讀取的資料，資料長度大於等於9 bytes
+  //如果Serial2 port有等待讀取的資料且資料長度大於等於9 bytes
   if (Serial2.available() >= 9)
   {
-    //讀取Serial2 port的資料到soilSensorResponse
-   byte index = 0; // index of soilSensorResponse
+   byte index = 0; // 宣告變數index(soilSensorResponse陣列用)
 
-  //===========依index順序將讀取到的資料印出(index[0]~index[9])=============
-   while (Serial2.available() && index < 9)
+  //===========依index順序將讀取到的資料全數印出(index[0]~index[9])=============
+   while (Serial2.available() && index < 9)  //當Serial2 port有資料且index小於9時
    {
-     soilSensorResponse[index] = Serial2.read(); // read the byte from Serial2 port     
-     Serial.print(soilSensorResponse[index], HEX); // print the byte in HEX
+     soilSensorResponse[index] = Serial2.read(); // 從Serial2 port讀取資料，依序存放到soilSensorResponse陣列    
+     Serial.print(soilSensorResponse[index], HEX); // 印出剛存放的陣列資料(以16進位表示)
      Serial.print(" "); // print a space     
-     index++; // increment the index
+     index++; // 索引遞增
    }
    Serial.println(); // print a new line
   }
