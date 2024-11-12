@@ -19,11 +19,13 @@ void setup()
 void loop()
 {
   sht.read();         // default = true/fast       slow = false
+  delay(1000);
   Serial.print("Temperature:");
   Serial.println(sht.getTemperature(), 1);
-  Serial.println("");
+ 
   Serial.print("Humidity:");
   Serial.println(sht.getHumidity(), 1);
+  Serial.println("");
   delay(1500);
 }
 
