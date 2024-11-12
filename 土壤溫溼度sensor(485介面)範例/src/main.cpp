@@ -1,3 +1,4 @@
+// Tseng 2024/11/12
 // 使用JXBS-3001-TR-RS模組讀取土壤濕度感測器的數值, 並透過nodemcu32-s的Serial2 port讀取 
 // 使用nodemcu32-s的Serial port輸出數值到終端
 
