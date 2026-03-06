@@ -3,7 +3,7 @@
 > **更新日期：** 2026年1月7日  
 > **Author:** Tseng
 
-這個倉庫包含了從基礎入門到進階應用的 ESP32 實作專題，旨在幫助開發者透過實務操作掌握物聯網 (IoT) 與嵌入式系統開發的核心技術。
+
 
 > 📖 **線上教學文件**：[https://hackmd.io/@johnt/esp32](https://hackmd.io/@johnt/esp32)
 
