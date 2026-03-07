@@ -1,92 +1,203 @@
-// 使用 SHT31 溫溼度感測器
-// ESP32 I2C 腳位: SDA = 21, SCL = 22
-
 #include <Arduino.h>
 #include <Wire.h>
 #include <WiFi.h>
 #include <Adafruit_SHT31.h>
+#include <PubSubClient.h>
+#include <NodeRemote.h>
 #include "wifi_credentials.h"
 
-// 建立 SHT31 感測器物件
+// NodeRemote 裝置識別（必須與 NodeAnywhere 配對一致）
+const char *CLAIM_TOKEN = "68w3iF8goqvLJzvOmclSAQt69mg7Wss4";
+const char *DEVICE_UID = "PFTC_XD67_QG6K";
+NodeRemote node(CLAIM_TOKEN, DEVICE_UID);
+
+// 額外 MQTT 發佈到 mqttgo.io
+const char *MQTT_BROKER = "mqttgo.io";
+const uint16_t MQTT_PORT = 1883;
+const char *TOPIC_TEMP = "/hhvs/cc/temp";
+const char *TOPIC_HUMI = "/hhvs/cc/humi";
+
 Adafruit_SHT31 sht31;
+WiFiClient wifiClient;
+PubSubClient mqttClient(wifiClient);
 
-void connectWiFi()
+WiFiCredentials wifiCredentials;
+String mqttClientId;
+bool shtReady = false;
+
+// 非阻塞週期（毫秒）
+const unsigned long WIFI_RETRY_MS = 10000;
+const unsigned long MQTT_RETRY_MS = 3000;
+const unsigned long SHT_RETRY_MS = 5000;
+const unsigned long PUBLISH_INTERVAL_MS = 10000;
+const unsigned long NODE_ERR_LOG_MS = 30000;
+
+unsigned long lastWiFiAttemptMs = 0;
+unsigned long lastMqttAttemptMs = 0;
+unsigned long lastShtAttemptMs = 0;
+unsigned long lastPublishMs = 0;
+unsigned long lastNodeErrLogMs = 0;
+
+void connectWiFiIfNeeded(unsigned long now)
 {
-  // 透過獨立函式取得 Wi-Fi 帳密
-  WiFiCredentials credentials = getWiFiCredentials();
-
-  WiFi.mode(WIFI_STA);
-  WiFi.setSleep(false);
-  WiFi.begin(credentials.ssid.c_str(), credentials.password.c_str());
-
-  Serial.print("Wi-Fi 連線中");
-  while (WiFi.status() != WL_CONNECTED)
+  if (WiFi.status() == WL_CONNECTED || now - lastWiFiAttemptMs < WIFI_RETRY_MS)
   {
-    delay(500);
-    Serial.print(".");
+    return;
   }
-  Serial.println();
-  Serial.print("Wi-Fi 已連線，IP: ");
-  Serial.println(WiFi.localIP());
+
+  lastWiFiAttemptMs = now;
+  WiFi.begin(wifiCredentials.ssid.c_str(), wifiCredentials.password.c_str());
+  Serial.println("Wi-Fi reconnect requested");
+}
+
+void connectMqttIfNeeded(unsigned long now)
+{
+  if (WiFi.status() != WL_CONNECTED || mqttClient.connected() || now - lastMqttAttemptMs < MQTT_RETRY_MS)
+  {
+    return;
+  }
+
+  lastMqttAttemptMs = now;
+
+  if (mqttClientId.length() == 0)
+  {
+    uint64_t mac = ESP.getEfuseMac();
+    mqttClientId = "esp32-" + String((uint32_t)(mac >> 32), HEX) + String((uint32_t)mac, HEX);
+  }
+
+  if (mqttClient.connect(mqttClientId.c_str()))
+  {
+    Serial.println("MQTT connected");
+  }
+  else
+  {
+    Serial.print("MQTT connect failed, state=");
+    Serial.println(mqttClient.state());
+  }
+}
+
+void initShtIfNeeded(unsigned long now)
+{
+  if (shtReady || now - lastShtAttemptMs < SHT_RETRY_MS)
+  {
+    return;
+  }
+
+  lastShtAttemptMs = now;
+  shtReady = sht31.begin(0x44);
+
+  if (shtReady)
+  {
+    Serial.println("SHT31 ready");
+  }
+  else
+  {
+    Serial.println("SHT31 init failed, will retry");
+  }
+}
+
+// 針對 NodeRemote 錯誤做節流提示，避免訊息淹沒
+void logNodeRemoteErrorIfNeeded(unsigned long now)
+{
+  if (now - lastNodeErrLogMs < NODE_ERR_LOG_MS)
+  {
+    return;
+  }
+
+  const String err = node.lastError();
+  if (err.length() == 0)
+  {
+    return;
+  }
+
+  lastNodeErrLogMs = now;
+
+  if (err == "claim_permanently_failed")
+  {
+    Serial.println("NodeRemote claim permanently failed. Create NEW CLAIM_TOKEN + DEVICE_UID in NodeAnywhere and reflash.");
+    return;
+  }
+
+  Serial.print("NodeRemote status: ");
+  Serial.println(err);
+}
+
+void publishSensorData(unsigned long now)
+{
+  if (!shtReady || !mqttClient.connected() || now - lastPublishMs < PUBLISH_INTERVAL_MS)
+  {
+    return;
+  }
+
+  lastPublishMs = now;
+
+  float temperature = sht31.readTemperature();
+  float humidity = sht31.readHumidity();
+  if (isnan(temperature) || isnan(humidity))
+  {
+    Serial.println("SHT31 read failed");
+    return;
+  }
+
+  char tempPayload[16];
+  char humiPayload[16];
+  dtostrf(temperature, 0, 2, tempPayload);
+  dtostrf(humidity, 0, 2, humiPayload);
+
+  bool tempOk = mqttClient.publish(TOPIC_TEMP, tempPayload);
+  bool humiOk = mqttClient.publish(TOPIC_HUMI, humiPayload);
+
+  Serial.print("Temp ");
+  Serial.print(tempPayload);
+  Serial.print(" -> ");
+  Serial.print(TOPIC_TEMP);
+  Serial.print(tempOk ? " [OK]" : " [FAIL]");
+  Serial.print(" | Humi ");
+  Serial.print(humiPayload);
+  Serial.print(" -> ");
+  Serial.print(TOPIC_HUMI);
+  Serial.println(humiOk ? " [OK]" : " [FAIL]");
 }
 
 void setup()
 {
-  // 啟動序列埠，供終端機顯示量測結果
   Serial.begin(9600);
-  delay(1000);
 
-  // 初始化 I2C，指定 ESP32 的 SDA 與 SCL 腳位
+  wifiCredentials = getWiFiCredentials();
+
+  WiFi.mode(WIFI_STA);
+  WiFi.setSleep(false);
+
+  // 保留 NodeRemote 的 Wi-Fi 管理設定
+  node.setWifiManaged(true);
+  node.wifiAdd(wifiCredentials.ssid.c_str(), wifiCredentials.password.c_str(), 1);
+
+  mqttClient.setServer(MQTT_BROKER, MQTT_PORT);
   Wire.begin(21, 22);
 
-  // 啟動 SHT31，預設 I2C 位址為 0x44
-  if (!sht31.begin(0x44))
+  // 只呼叫一次 begin，後續由 node.loop() 持續維護
+  if (!node.begin())
   {
-    Serial.println("SHT31 初始化失敗，請檢查接線與 I2C 位址。");
-
-    // 若初始化失敗則停止執行，避免後續持續讀取錯誤資料
-    while (true)
-    {
-      delay(1000);
-    }
+    Serial.print("NodeRemote startup: ");
+    Serial.println(node.lastError());
   }
-
-  // 連線到 Wi-Fi
-  connectWiFi();
-
-  Serial.println("SHT31 初始化完成。");
-  Serial.println("每 3 秒輸出一次溫度與濕度。");
+  else
+  {
+    Serial.println("NodeRemote connected");
+  }
 }
 
 void loop()
 {
-  // 若 Wi-Fi 斷線則自動重新連線
-  if (WiFi.status() != WL_CONNECTED)
-  {
-    Serial.println("Wi-Fi 已斷線，重新連線中...");
-    WiFi.disconnect();
-    connectWiFi();
-  }
+  const unsigned long now = millis();
 
-  // 讀取溫度與濕度
-  float temperature = sht31.readTemperature();
-  float humidity = sht31.readHumidity();
+  node.loop();
+  logNodeRemoteErrorIfNeeded(now);
 
-  // 若回傳不是數值，表示本次讀取失敗
-  if (isnan(temperature) || isnan(humidity))
-  {
-    Serial.println("讀取 SHT31 失敗。");
-  }
-  else
-  {
-    // 將量測結果輸出到序列終端機
-    Serial.print("Temperature: ");
-    Serial.print(temperature, 2);
-    Serial.print(" °C, Humidity: ");
-    Serial.print(humidity, 2);
-    Serial.println(" %");
-  }
+  connectWiFiIfNeeded(now);
+  connectMqttIfNeeded(now);
+  initShtIfNeeded(now);
 
-  // 每 3 秒量測一次
-  delay(3000);
+  mqttClient.loop();
+  publishSensorData(now);
 }
