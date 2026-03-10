@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>8x32 LED 訊息發佈器</title>
+    <style>
+        :root {
+            --color-primary: #0ABAB5;
+            --color-text-dark: #0b3f3d;
+            --color-text-medium: #145754;
+            --color-text-light: #333;
+            --color-led: #ff4444;
+            --color-led-glow: #ff0000;
+            --color-border: #08a39a;
+            --color-success: #27ae60;
+            --color-error: #e74c3c;
+            --spacing-xs: 3px;
+            --spacing-sm: 6px;
+            --spacing-md: 12px;
+            --spacing-lg: 20px;
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 12px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            background: white;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: var(--spacing-lg);
+        }
+        
+        .container {
+            background: var(--color-primary);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            padding: var(--spacing-lg);
+            max-width: 500px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: var(--color-text-dark);
+            margin-bottom: var(--spacing-sm);
+            font-size: 22px;
+        }
+        
+        .subtitle {
+            color: var(--color-text-medium);
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        
+        .status-box {
+            display: none;
+        }
+        
+        .form-group {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--color-text-dark);
+            font-weight: 500;
+            font-size: 13px;
+        }
+        
+        .helper-text {
+            font-size: 11px;
+            color: var(--color-text-medium);
+            margin-top: 4px;
+        }
+        
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 13px;
+            transition: border-color 0.3s;
+            background: white;
+            color: var(--color-text-light);
+        }
+        
+        input[type="text"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #006b62;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+            font-family: monospace;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 8px;
+            margin-top: var(--spacing-md);
+        }
+
+        .control-section {
+            margin-top: var(--spacing-md);
+        }
+
+        .control-title {
+            color: var(--color-text-dark);
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: var(--spacing-sm);
+        }
+
+        .btn-control {
+            min-height: 38px;
+            padding: 8px 6px;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.2;
+            background: rgba(255, 255, 255, 0.92);
+            color: var(--color-text-dark);
+            border: 1px solid rgba(8, 88, 86, 0.25);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-control:hover:not(:disabled) {
+            background: white;
+        }
+
+        .btn-control:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        button {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-publish {
+            background: white;
+            color: var(--color-primary);
+        }
+        
+        .btn-publish:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 255, 255, 0.4);
+        }
+        
+        .btn-publish:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-clear {
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--color-text-dark);
+            border: 1px solid rgba(8, 88, 86, 0.25);
+        }
+        
+        .btn-clear:hover {
+            background: white;
+        }
+        
+        .topic-info {
+            display: none;
+        }
+        
+        .topic-info code {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        
+        .log-box {
+            display: none;
+            background: white;
+            border: 1px solid rgba(10, 186, 181, 0.2);
+            border-radius: 4px;
+            padding: 12px;
+            margin-top: 20px;
+            font-size: 12px;
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+            color: #555;
+        }
+        
+        .log-entry {
+            margin-bottom: 6px;
+            padding: 4px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .log-time {
+            color: #999;
+            margin-right: 8px;
+        }
+        
+        .log-success {
+            color: var(--color-success);
+        }
+        
+        .log-error {
+            color: var(--color-error);
+        }
+        
+        .preview-section {
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .preview-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-sm);
+            font-size: 11px;
+        }
+        
+        .preview-status-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: var(--spacing-xs) 8px;
+            border-radius: 10px;
+            color: var(--color-text-dark);
+            font-weight: 600;
+        }
+        
+        .led-preview {
+            background: #1a1a1a;
+            border: 2px solid #333;
+            border-radius: var(--radius-md);
+            padding: 10px;
+            overflow: hidden;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .led-viewport {
+            width: 32ch;
+            max-width: 100%;
+            overflow: hidden;
+            position: relative;
+            border-left: 1px solid #444;
+            border-right: 1px solid #444;
+            padding: 0 3px;
+            background: #0a0a0a;
+        }
+        
+        .led-display {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--color-led);
+            text-shadow: 0 0 5px var(--color-led-glow), 0 0 8px var(--color-led-glow);
+            white-space: nowrap;
+            letter-spacing: 0px;
+            display: inline-block;
+        }
+        
+        .led-display.empty {
+            color: #333;
+            text-shadow: none;
+            text-align: center;
+            width: 100%;
+        }
+        
+        .led-display.fixed {
+            width: 100%;
+            text-align: center;
+        }
+        
+        .led-display.scrolling {
+            animation: scrollLeft 6s linear infinite;
+            min-width: 100%;
+        }
+        
+        .led-display.scrolling.reverse {
+            animation: scrollRight 6s linear infinite;
+            min-width: 100%;
+        }
+        
+        .led-display.fast {
+            animation-duration: 3s !important;
+        }
+        
+        .led-display.slow {
+            animation-duration: 12s !important;
+        }
+        
+        @keyframes scrollLeft {
+            0% {
+                transform: translateX(32ch);
+            }
+            100% {
+                transform: translateX(calc(-100% - 8px));
+            }
+        }
+        
+        @keyframes scrollRight {
+            0% {
+                transform: translateX(calc(-100% - 8px));
+            }
+            100% {
+                transform: translateX(32ch);
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="container" role="main">
+        <h1>🔔 8x8 LED 訊息發佈</h1>
+        <p class="subtitle">LED 矩陣發送捲動訊息(限英文)</p>
+        
+        <div id="statusBox" class="status-box disconnected" role="status" aria-live="polite">
+            ⚫ 未連接 MQTT Broker
+        </div>
+        
+        <div class="preview-section">
+            <label>輸出預覽</label>
+            <div class="preview-status" role="status">
+                <span class="preview-status-item" id="modeStatus">模式: 捲動</span>
+                <span class="preview-status-item" id="directionStatus">方向: 向左</span>
+                <span class="preview-status-item" id="speedStatus">速度: 標準</span>
+            </div>
+            <div class="led-preview" aria-label="LED顯示預覽區域">
+                <div class="led-viewport">
+                    <div id="ledDisplay" class="led-display empty">[ LED 顯示預覽 ]</div>
+                </div>
+            </div>
+        </div>
+        
+        <form id="messageForm" class="form-group">
+            <label for="messageInput">訊息内容</label>
+            <textarea id="messageInput" placeholder="輸入要在 LED 上顯示的訊息..." 
+                      aria-describedby="messageHelp"></textarea>
+            <small id="messageHelp" class="helper-text">提示：按 Ctrl+Enter 快速發送</small>
+        </form>
+        
+        <div class="button-group">
+            <button class="btn-publish" id="publishBtn" disabled 
+                    aria-label="發佈訊息到LED顯示器">📤 發佈訊息</button>
+            <button class="btn-clear" id="clearBtn" 
+                    aria-label="清除輸入框並清空LED顯示">🧹 清除並清空 LED</button>
+        </div>
+
+        <div class="control-section">
+            <div class="control-title">顯示模式控制</div>
+            <div class="control-grid">
+                <button class="btn-control" data-control="fixed" disabled 
+                        aria-label="切換為固定顯示模式">📌 固定</button>
+                <button class="btn-control" data-control="scroll" disabled 
+                        aria-label="切換為捲動顯示模式">🔁 捲動</button>
+                <button class="btn-control" data-control="auto" disabled 
+                        aria-label="切換為自動顯示模式">🤖 自動</button>
+                <button class="btn-control" data-control="reverse on" disabled 
+                        aria-label="開啟反向捲動">🔄 反向開</button>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <div class="control-title">方向與速度</div>
+            <div class="control-grid">
+                <button class="btn-control" data-control="left" disabled 
+                        aria-label="設定捲動方向為向左">⬅ 向左</button>
+                <button class="btn-control" data-control="right" disabled 
+                        aria-label="設定捲動方向為向右">➡ 向右</button>
+                <button class="btn-control" data-control="faster" disabled 
+                        aria-label="加快捲動速度">⏩ 加速</button>
+                <button class="btn-control" data-control="slower" disabled 
+                        aria-label="減慢捲動速度">⏪ 減速</button>
+            </div>
+        </div>
+
+        <div class="control-section">
+            <div class="control-title">翻轉控制</div>
+            <div class="control-grid">
+                <button class="btn-control" data-control="fliprow on" disabled 
+                        aria-label="開啟上下翻轉">↕ 上下開</button>
+                <button class="btn-control" data-control="fliprow off" disabled 
+                        aria-label="關閉上下翻轉">↕ 上下關</button>
+                <button class="btn-control" data-control="flipcol on" disabled 
+                        aria-label="開啟左右翻轉">↔ 左右開</button>
+                <button class="btn-control" data-control="flipcol off" disabled 
+                        aria-label="關閉左右翻轉">↔ 左右關</button>
+            </div>
+        </div>
+        
+        <div class="topic-info">
+            📌 訊息將發佈到: <code>/hhvs/ie/8x8led</code>
+        </div>
+        
+        <div class="log-box" id="logBox" role="log" aria-live="polite">
+            <div class="log-entry">等待連接...</div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/mqtt@5.0.5/dist/mqtt.min.js"></script>
+    <script>
+        // LED 控制器模組 - 使用 IIFE 模式封裝避免全域污染
+        const LedController = (() => {
+            // ========== 常數定義 ==========
+            const CONFIG = {
+                BROKER_URL: 'wss://mqb.hhvs.tn.edu.tw:8084',
+                TOPIC: '/hhvs/ie/8x8led',
+                LOG_MAX_ENTRIES: 20,
+                CLIENT_ID_LENGTH: 9,
+                MQTT_QOS: 1,
+                RECONNECT_PERIOD: 1000,
+                CONNECT_TIMEOUT: 30000
+            };
+            
+            const DISPLAY_MODE = {
+                FIXED: 'fixed',
+                SCROLL: 'scroll',
+                AUTO: 'auto'
+            };
+            
+            const SPEED = {
+                SLOW: 'slow',
+                NORMAL: 'normal',
+                FAST: 'fast'
+            };
+            
+            const DIRECTION = {
+                LEFT: 'left',
+                RIGHT: 'right'
+            };
+            
+            // ========== 私有變數 ==========
+            let mqttClient = null;
+            let logEntries = [];
+            let previewState = {
+                mode: DISPLAY_MODE.SCROLL,
+                direction: DIRECTION.LEFT,
+                speed: SPEED.NORMAL,
+                reverse: false,
+                flipRow: false,
+                flipCol: false
+            };
+            
+            // ========== DOM 元素快取 ==========
+            const elements = {
+                statusBox: null,
+                publishBtn: null,
+                clearBtn: null,
+                messageInput: null,
+                messageForm: null,
+                ledDisplay: null,
+                modeStatus: null,
+                directionStatus: null,
+                speedStatus: null,
+                logBox: null,
+                controlButtons: null
+            };
+            
+            // ========== 命令處理器映射 ==========
+            const commandHandlers = new Map([
+                ['fixed', () => { previewState.mode = DISPLAY_MODE.FIXED; }],
+                ['scroll', () => { previewState.mode = DISPLAY_MODE.SCROLL; }],
+                ['auto', () => { previewState.mode = DISPLAY_MODE.AUTO; }],
+                ['left', () => { previewState.direction = DIRECTION.LEFT; }],
+                ['right', () => { previewState.direction = DIRECTION.RIGHT; }],
+                ['faster', () => {
+                    if (previewState.speed === SPEED.SLOW) {
+                        previewState.speed = SPEED.NORMAL;
+                    } else if (previewState.speed === SPEED.NORMAL) {
+                        previewState.speed = SPEED.FAST;
+                    }
+                }],
+                ['slower', () => {
+                    if (previewState.speed === SPEED.FAST) {
+                        previewState.speed = SPEED.NORMAL;
+                    } else if (previewState.speed === SPEED.NORMAL) {
+                        previewState.speed = SPEED.SLOW;
+                    }
+                }]
+            ]);
+            
+            // ========== 工具函式 ==========
+            function escapeHtml(text) {
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text.replace(/[&<>"']/g, m => map[m]);
+            }
+            
+            function generateClientId() {
+                return 'web-led-' + Math.random().toString(36).substr(2, CONFIG.CLIENT_ID_LENGTH);
+            }
+            
+            // ========== 日誌管理 ==========
+            function addLog(message, type = 'info') {
+                try {
+                    const time = new Date().toLocaleTimeString('zh-TW');
+                    const entry = { time, message, type };
+                    logEntries.unshift(entry);
+                    
+                    if (logEntries.length > CONFIG.LOG_MAX_ENTRIES) {
+                        logEntries.pop();
+                    }
+                    
+                    updateLogBox();
+                } catch (error) {
+                    console.error('添加日誌失敗:', error);
+                }
+            }
+            
+            function updateLogBox() {
+                try {
+                    if (!elements.logBox) return;
+                    
+                    elements.logBox.innerHTML = logEntries.map(entry => {
+                        const className = entry.type === 'success' ? 'log-success' : 
+                                        entry.type === 'error' ? 'log-error' : '';
+                        return `<div class="log-entry"><span class="log-time">${entry.time}</span><span class="${className}">${escapeHtml(entry.message)}</span></div>`;
+                    }).join('');
+                    elements.logBox.scrollTop = 0;
+                } catch (error) {
+                    console.error('更新日誌顯示失敗:', error);
+                }
+            }
+            
+            // ========== 預覽管理 ==========
+            function updatePreview() {
+                try {
+                    if (!elements.messageInput || !elements.ledDisplay) return;
+                    
+                    const message = elements.messageInput.value;
+                    
+                    if (message.trim() === '') {
+                        elements.ledDisplay.textContent = '[ LED 顯示預覽 ]';
+                        elements.ledDisplay.className = 'led-display empty';
+                    } else {
+                        elements.ledDisplay.textContent = message;
+                        
+                        let className = 'led-display';
+                        
+                        if (previewState.mode === DISPLAY_MODE.SCROLL || previewState.mode === DISPLAY_MODE.AUTO) {
+                            className += ' scrolling';
+                            
+                            if (previewState.direction === DIRECTION.RIGHT || previewState.reverse) {
+                                className += ' reverse';
+                            }
+                            
+                            if (previewState.speed === SPEED.FAST) {
+                                className += ' fast';
+                            } else if (previewState.speed === SPEED.SLOW) {
+                                className += ' slow';
+                            }
+                        } else if (previewState.mode === DISPLAY_MODE.FIXED) {
+                            className += ' fixed';
+                        }
+                        
+                        elements.ledDisplay.className = className;
+                    }
+                    
+                    updatePreviewStatus();
+                } catch (error) {
+                    console.error('更新預覽失敗:', error);
+                    addLog(`更新預覽失敗: ${error.message}`, 'error');
+                }
+            }
+            
+            function updatePreviewStatus() {
+                try {
+                    if (!elements.modeStatus || !elements.directionStatus || !elements.speedStatus) return;
+                    
+                    const modeText = {
+                        [DISPLAY_MODE.FIXED]: '固定',
+                        [DISPLAY_MODE.SCROLL]: '捲動',
+                        [DISPLAY_MODE.AUTO]: '自動'
+                    };
+                    elements.modeStatus.textContent = `模式: ${modeText[previewState.mode] || '捲動'}`;
+                    
+                    const dirText = previewState.reverse ? 
+                        (previewState.direction === DIRECTION.LEFT ? '向右(反向)' : '向左(反向)') :
+                        (previewState.direction === DIRECTION.LEFT ? '向左' : '向右');
+                    elements.directionStatus.textContent = `方向: ${dirText}`;
+                    
+                    const speedText = {
+                        [SPEED.SLOW]: '慢速',
+                        [SPEED.NORMAL]: '標準',
+                        [SPEED.FAST]: '快速'
+                    };
+                    elements.speedStatus.textContent = `速度: ${speedText[previewState.speed] || '標準'}`;
+                } catch (error) {
+                    console.error('更新預覽狀態失敗:', error);
+                }
+            }
+            
+            // ========== 連接狀態管理 ==========
+            function updateConnectionStatus(connected) {
+                try {
+                    if (!elements.statusBox || !elements.publishBtn || !elements.controlButtons) return;
+                    
+                    if (connected) {
+                        elements.statusBox.className = 'status-box connected';
+                        elements.statusBox.textContent = '🟢 已連接 MQTT Broker';
+                        elements.publishBtn.disabled = false;
+                        elements.controlButtons.forEach(btn => {
+                            btn.disabled = false;
+                        });
+                        addLog('已連接 MQTT Broker', 'success');
+                    } else {
+                        elements.statusBox.className = 'status-box disconnected';
+                        elements.statusBox.textContent = '⚫ 未連接 MQTT Broker';
+                        elements.publishBtn.disabled = true;
+                        elements.controlButtons.forEach(btn => {
+                            btn.disabled = true;
+                        });
+                        addLog('已斷開連接', 'error');
+                    }
+                } catch (error) {
+                    console.error('更新連接狀態失敗:', error);
+                }
+            }
+            
+            // ========== MQTT 操作 ==========
+            function publishTopicMessage(message, successText) {
+                try {
+                    if (!mqttClient || !mqttClient.connected) {
+                        addLog('未連接 MQTT Broker', 'error');
+                        return;
+                    }
+
+                    mqttClient.publish(CONFIG.TOPIC, message, { qos: CONFIG.MQTT_QOS }, (err) => {
+                        if (err) {
+                            addLog(`發佈失敗: ${err.message}`, 'error');
+                        } else {
+                            addLog(successText, 'success');
+                        }
+                    });
+                } catch (error) {
+                    console.error('發佈訊息失敗:', error);
+                    addLog(`發佈訊息失敗: ${error.message}`, 'error');
+                }
+            }
+            
+            function sendControl(command) {
+                try {
+                    // 使用 Map 查找命令處理器
+                    const handler = commandHandlers.get(command);
+                    if (handler) {
+                        handler();
+                    } else if (command.startsWith('reverse')) {
+                        previewState.reverse = command.includes('on');
+                    } else if (command.startsWith('fliprow')) {
+                        previewState.flipRow = command.includes('on');
+                    } else if (command.startsWith('flipcol')) {
+                        previewState.flipCol = command.includes('on');
+                    }
+                    
+                    // 更新預覽顯示
+                    if (!elements.ledDisplay.classList.contains('empty')) {
+                        updatePreview();
+                    } else {
+                        updatePreviewStatus();
+                    }
+                    
+                    // 發送 MQTT 訊息
+                    publishTopicMessage(command, `已送出控制: ${command}`);
+                } catch (error) {
+                    console.error('發送控制命令失敗:', error);
+                    addLog(`發送控制失敗: ${error.message}`, 'error');
+                }
+            }
+            
+            function connectMqtt() {
+                try {
+                    const clientId = generateClientId();
+                    
+                    mqttClient = mqtt.connect(CONFIG.BROKER_URL, {
+                        clientId: clientId,
+                        clean: true,
+                        reconnectPeriod: CONFIG.RECONNECT_PERIOD,
+                        connectTimeout: CONFIG.CONNECT_TIMEOUT
+                    });
+                    
+                    mqttClient.on('connect', () => {
+                        updateConnectionStatus(true);
+                    });
+                    
+                    mqttClient.on('disconnect', () => {
+                        updateConnectionStatus(false);
+                    });
+                    
+                    mqttClient.on('error', (error) => {
+                        addLog(`連接錯誤: ${error.message}`, 'error');
+                    });
+                } catch (error) {
+                    console.error('MQTT 初始化失敗:', error);
+                    addLog(`初始化錯誤: ${error.message}`, 'error');
+                }
+            }
+            
+            // ========== 使用者操作 ==========
+            function publishMessage(event) {
+                if (event) event.preventDefault();
+                
+                try {
+                    if (!elements.messageInput) {
+                        throw new Error('找不到輸入框元素');
+                    }
+                    
+                    const message = elements.messageInput.value.trim();
+                    
+                    if (!message) {
+                        addLog('訊息不能為空', 'error');
+                        return;
+                    }
+                    
+                    updatePreview();
+                    publishTopicMessage(message, `✓ 已發佈: "${message}"`);
+                } catch (error) {
+                    console.error('發佈訊息失敗:', error);
+                    addLog(`發佈失敗: ${error.message}`, 'error');
+                }
+            }
+            
+            function clearInputAndLed() {
+                try {
+                    if (!elements.messageInput || !elements.ledDisplay) return;
+                    
+                    elements.messageInput.value = '';
+                    elements.messageInput.focus();
+                    
+                    // 清除預覽
+                    elements.ledDisplay.textContent = '[ LED 顯示預覽 ]';
+                    elements.ledDisplay.className = 'led-display empty';
+
+                    if (!mqttClient || !mqttClient.connected) {
+                        addLog('未連接 MQTT Broker，僅清除輸入框', 'error');
+                        return;
+                    }
+                    publishTopicMessage('', '已清除 LED 顯示');
+                } catch (error) {
+                    console.error('清除失敗:', error);
+                    addLog(`清除失敗: ${error.message}`, 'error');
+                }
+            }
+            
+            // ========== 事件處理器 ==========
+            function initEventListeners() {
+                try {
+                    // 表單提交事件
+                    if (elements.messageForm) {
+                        elements.messageForm.addEventListener('submit', publishMessage);
+                    }
+                    
+                    // 發佈按鈕
+                    if (elements.publishBtn) {
+                        elements.publishBtn.addEventListener('click', publishMessage);
+                    }
+                    
+                    // 清除按鈕
+                    if (elements.clearBtn) {
+                        elements.clearBtn.addEventListener('click', clearInputAndLed);
+                    }
+                    
+                    // 控制按鈕（事件委派）
+                    if (elements.controlButtons) {
+                        elements.controlButtons.forEach(btn => {
+                            btn.addEventListener('click', (e) => {
+                                const command = e.currentTarget.getAttribute('data-control');
+                                if (command) {
+                                    sendControl(command);
+                                }
+                            });
+                        });
+                    }
+                    
+                    // Ctrl+Enter 快捷鍵
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter' && e.ctrlKey) {
+                            publishMessage();
+                        }
+                    });
+                } catch (error) {
+                    console.error('初始化事件監聽器失敗:', error);
+                }
+            }
+            
+            // ========== 初始化 ==========
+            function cacheElements() {
+                elements.statusBox = document.getElementById('statusBox');
+                elements.publishBtn = document.getElementById('publishBtn');
+                elements.clearBtn = document.getElementById('clearBtn');
+                elements.messageInput = document.getElementById('messageInput');
+                elements.messageForm = document.getElementById('messageForm');
+                elements.ledDisplay = document.getElementById('ledDisplay');
+                elements.modeStatus = document.getElementById('modeStatus');
+                elements.directionStatus = document.getElementById('directionStatus');
+                elements.speedStatus = document.getElementById('speedStatus');
+                elements.logBox = document.getElementById('logBox');
+                elements.controlButtons = document.querySelectorAll('[data-control]');
+            }
+            
+            function init() {
+                try {
+                    cacheElements();
+                    initEventListeners();
+                    addLog('正在連接 MQTT Broker...', 'info');
+                    connectMqtt();
+                } catch (error) {
+                    console.error('初始化失敗:', error);
+                }
+            }
+            
+            // ========== 公開 API ==========
+            return {
+                init: init
+            };
+        })();
+        
+        // 頁面載入完成後初始化
+        window.addEventListener('load', () => {
+            LedController.init();
+        });
+    </script>
+</body>
+</html>
